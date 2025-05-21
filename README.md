@@ -1,2 +1,2 @@
-# Node_app
-A Node.js based application
+Node_app
+A Node.js-based application featuring a simple CRUD interface and MongoDB as the database. It is containerized using Docker Compose, with both the Node.js app and MongoDB services. The project is integrated with GitHub Actions for a CI/CD pipeline. On every push or merge to the main branch, it builds a new Docker image, redeploys it to the VPS, and sends an email notification with the status and details of the GitHub Action run.
