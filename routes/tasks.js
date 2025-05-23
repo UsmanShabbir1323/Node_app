@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Task = require('../models/Task');
 const cache = require('../cache');
+const os = require('os');
 
 // Create a new task
 router.post('/', async (req, res) => {
@@ -91,6 +92,12 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+router.get('/pod/ping', (req, res) => {
+  const podName = os.hostname(); // This gets the pod name
+  console.log(`Handled by pod: ${podName}`);
+  res.send(`PONG from pod ${podName}`);
 });
 
 module.exports = router;
