@@ -1,9 +1,9 @@
-name: CI/CD to EKS
+name: Deploy to K3s
 
 on:
   push:
     branches:
-      - TS-3  # <-- The branch that triggers this workflow
+      - TS-677  # The branch that triggers the deployment
 
 jobs:
   deploy:
@@ -14,38 +14,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v3
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Login to Amazon ECR
+      - name: Build and Push Docker Image
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+          docker build -t usmanshabbir/task-api:latest .
+          docker push usmanshabbir/task-api:latest
 
-      - name: Build Docker Image
-        run: |
-          docker build -t task-api .
-
-      - name: Tag Docker Image
-        run: |
-          docker tag task-api:latest ${{ secrets.ECR_REGISTRY }}:latest
-
-      - name: Push Docker Image to ECR
-        run: |
-          docker push ${{ secrets.ECR_REGISTRY }}:latest
-
-      - name: Update kubeconfig for EKS
-        run: |
-          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
-
-      - name: Verify cluster access
-        run: |
-          aws sts get-caller-identity
-          aws eks describe-cluster --name ${{ secrets.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
-
-      - name: Deploy updated image to EKS
-        run: |
-          kubectl set image deployment/task-api task-api=${{ secrets.ECR_REGISTRY }}:latest --record
+      - name: Trigger K3s Deployment on VPS
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: 22
+          script: |
+            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+            kubectl rollout restart deployment task-api
+            kubectl rollout status deployment task-api
