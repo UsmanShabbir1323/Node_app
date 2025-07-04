@@ -18,7 +18,11 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/msg', async (req, res) => {
-    res.status(200).send("Hello world from container jenkins:)");
+    res.status(200).send("Hello world from container jenkins :)");
+});
+
+router.get('/health', async (req, res) => {
+    res.status(200).send("Everything is working fine");
 });
 
 // Get all tasks
