@@ -42,10 +42,9 @@ pipeline {
     stage('Conditional Execution') {
       steps {
         script {
-          if (env.ACTUAL_BRANCH == 'TS-5') {
-            echo "✅ TS-5 branch detected. Running pipeline..."
+          if (env.ACTUAL_BRANCH == 'TS-6') {
+            echo "✅ TS-6 branch detected. Running pipeline..."
 
-            // Run all your logic inside this block
             sh '''
               echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
               docker build -t usmanshabbir/task-api:latest .
@@ -58,10 +57,34 @@ kubectl rollout status deployment task-api
 EOF
             '''
           } else {
-            echo "🚫 This pipeline only runs for the TS-5 branch. Skipping..."
+            echo "🚫 This pipeline only runs for the TS-6 branch. Skipping..."
           }
         }
       }
     }
   }
+post {
+  success {
+    script {
+      mail to: 'usmanshabbir202@gmail.com',
+           subject: "✅ Jenkins Success: ${env.JOB_NAME} [#${env.BUILD_NUMBER}]",
+           body: """🎉 Build succeeded!
+Job: ${env.JOB_NAME}
+Branch: ${env.ACTUAL_BRANCH ?: 'Unknown'}
+Build: #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}"""
+    }
+  }
+  failure {
+    script {
+      mail to: 'usmanshabbir202@gmail.com',
+           subject: "❌ Jenkins Failure: ${env.JOB_NAME} [#${env.BUILD_NUMBER}]",
+           body: """🚨 Build failed!
+Job: ${env.JOB_NAME}
+Branch: ${env.ACTUAL_BRANCH ?: 'Unknown'}
+Build: #${env.BUILD_NUMBER}
+URL: ${env.BUILD_URL}"""
+    }
+  }
+}
 }
