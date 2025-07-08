@@ -3,12 +3,12 @@ name: Deploy to K3s
 on:
   push:
     branches:
-      - TS-677  # The branch that triggers the deployment
+      - TS-7  # The branch that triggers the deployment
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: AWS EKS
+    environment: Node App Environment
 
     steps:
       - name: Checkout code
@@ -22,17 +22,5 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build -t usmanshabbir/task-api:latest .
-          docker push usmanshabbir/task-api:latest
-
-      - name: Trigger K3s Deployment on VPS
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          password: ${{ secrets.VPS_PASSWORD }}
-          port: 22
-          script: |
-            export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-            kubectl rollout restart deployment task-api
-            kubectl rollout status deployment task-api
+          docker build -t usmanshabbir/task-api:latest-v5 .
+          docker push usmanshabbir/task-api:latest-v5

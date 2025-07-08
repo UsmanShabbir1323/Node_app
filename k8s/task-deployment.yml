@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: task-api
-        image: 211125299035.dkr.ecr.us-east-1.amazonaws.com/devops/django-repo:latest
+        image: usmanshabbir/task-api:latest-v5
         ports:
         - containerPort: 3000
         env:
