@@ -1,20 +1,22 @@
+#mongo.yml
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mongo
+  name: "{{ .Values.env }}-mongo"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mongo
+      app: "{{ .Values.env }}-mongo"
   template:
     metadata:
       labels:
-        app: mongo
+        app: "{{ .Values.env }}-mongo"
     spec:
       containers:
       - name: mongo
-        image: {{ .Values.mongo.image }}
+        image: "{{ .Values.mongo.image }}"
         ports:
         - containerPort: 27017
         volumeMounts:
@@ -23,14 +25,15 @@ spec:
       volumes:
       - name: mongo-data
         emptyDir: {}
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo
+  name: "{{ .Values.env }}-mongo"
 spec:
   selector:
-    app: mongo
+    app: "{{ .Values.env }}-mongo"
   ports:
   - port: 27017
     targetPort: 27017

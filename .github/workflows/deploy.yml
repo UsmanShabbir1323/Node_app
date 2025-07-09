@@ -3,16 +3,24 @@ name: Deploy to K3s
 on:
   push:
     branches:
-      - TS-8  # The branch that triggers the deployment
+      - TS-9
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: Node App Environment
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set image tag manually
+        run: echo "TAG=latest-v30" >> $GITHUB_ENV
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -22,5 +30,24 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build -t usmanshabbir/task-api:latest-v11 .
-          docker push usmanshabbir/task-api:latest-v11
+          docker build -t usmanshabbir/task-api:${{ env.TAG }} .
+          docker push usmanshabbir/task-api:${{ env.TAG }}
+
+      - name: Update Helm values.yaml
+        run: |
+          yq -i '.app.image.tag = strenv(TAG)' helm/task-api/envs/prod/values.yaml
+          yq -i '.app.image.tag = strenv(TAG)' helm/task-api/envs/dev/values.yaml
+
+      - name: Set up git identity
+        uses: qoomon/actions--setup-git@v1
+
+      - name: Set remote URL with GITHUB_TOKEN
+        run: |
+          git remote set-url origin \
+            https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+
+      - name: Amend and Push
+        run: |
+          git add helm/task-api/envs/prod/values.yaml helm/task-api/envs/dev/values.yaml
+          git commit --amend --no-edit || echo "Nothing to commit"
+          git push --force
