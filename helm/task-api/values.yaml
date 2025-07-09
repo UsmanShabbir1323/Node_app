@@ -1,0 +1,17 @@
+app:
+  name: task-api
+  image:
+    repository: usmanshabbir/task-api
+    tag: latest-v11
+  replicas: 5
+  port: 3000
+
+mongo:
+  image: mongo:6.0
+
+redis:
+  image: redis:latest
+
+nginx:
+  image: nginx:latest
+  nodePort: 30080

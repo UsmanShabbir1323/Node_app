@@ -3,7 +3,7 @@ name: Deploy to K3s
 on:
   push:
     branches:
-      - TS-7  # The branch that triggers the deployment
+      - TS-8  # The branch that triggers the deployment
 
 jobs:
   deploy:
@@ -22,5 +22,5 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          docker build -t usmanshabbir/task-api:latest-v5 .
-          docker push usmanshabbir/task-api:latest-v5
+          docker build -t usmanshabbir/task-api:latest-v11 .
+          docker push usmanshabbir/task-api:latest-v11
