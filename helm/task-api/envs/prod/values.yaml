@@ -2,8 +2,8 @@ app:
   name: task-api
   image:
     repository: usmanshabbir/task-api
-    tag: latest-v30
-  replicas: 5
+    tag: latest-v31
+  replicas: 6
   port: 3000
 mongo:
   image: mongo:6.0

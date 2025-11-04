@@ -1,12 +1,84 @@
-name: Deploy to K3s
+name: Build and Publish
 
 on:
   push:
     branches:
-      - TS-9
+      - TS-10
 
 jobs:
-  deploy:
+  build:
+    runs-on: ubuntu-latest
+    environment: Node App Environment
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm ci || npm i
+
+      - name: Lint (report only for Sonar import)
+        run: |
+          npx eslint . --ext .js,.jsx -f json -o eslint-report.json || true
+
+      - name: Debug SonarQube Configuration
+        run: |
+          if [ -z "$SONAR_HOST_URL" ]; then
+            echo "❌ SONAR_HOST_URL is not set"
+          else
+            echo "✅ SONAR_HOST_URL is set (length: ${#SONAR_HOST_URL})"
+            echo "SONAR_HOST_URL value: $SONAR_HOST_URL"
+          fi
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "❌ SONAR_TOKEN is not set"
+          else
+            echo "✅ SONAR_TOKEN is set (length: ${#SONAR_TOKEN})"
+          fi
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          
+      - name: Update sonar-project.properties
+        run: |
+          echo "sonar.host.url=$SONAR_HOST_URL" >> sonar-project.properties
+          cat sonar-project.properties
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Lint (enforce, fail build)
+        run: |
+          npx eslint . --ext .js,.jsx --max-warnings=0
+
+      - name: Build Docker image
+        run: |
+          docker build -t usmanshabbir/task-api:ci-${{ github.sha }} .
+
+  publish:
+    needs: build
     runs-on: ubuntu-latest
     environment: Node App Environment
     permissions:
@@ -16,11 +88,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
           fetch-depth: 0
 
-      - name: Set image tag manually
-        run: echo "TAG=latest-v30" >> $GITHUB_ENV
+      - name: Set image tag
+        run: echo "TAG=latest-v31" >> $GITHUB_ENV
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -38,16 +109,13 @@ jobs:
           yq -i '.app.image.tag = strenv(TAG)' helm/task-api/envs/prod/values.yaml
           yq -i '.app.image.tag = strenv(TAG)' helm/task-api/envs/dev/values.yaml
 
-      - name: Set up git identity
-        uses: qoomon/actions--setup-git@v1
-
-      - name: Set remote URL with GITHUB_TOKEN
+      - name: Configure git user
         run: |
-          git remote set-url origin \
-            https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Amend and Push
+      - name: Commit and push changes
         run: |
           git add helm/task-api/envs/prod/values.yaml helm/task-api/envs/dev/values.yaml
-          git commit --amend --no-edit || echo "Nothing to commit"
-          git push --force
+          git commit --amend --no-edit "chore(ci): update image tag to $TAG" || echo "Nothing to commit"
+          git push -f

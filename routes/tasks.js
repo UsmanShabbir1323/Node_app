@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/msg', async (req, res) => {
-    res.status(200).send("Hello world from Argo CD app v30 :)");
+    res.status(200).send("Hello world from Argo CD app v31...:)");
 });
 
 router.get('/health', async (req, res) => {
